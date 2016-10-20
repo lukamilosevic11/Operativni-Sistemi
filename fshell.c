@@ -21,7 +21,7 @@ void name_cp(char* line, char *fileSrc, char* fileDest, int len);
 void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest);
 
 int main(int argc, char **argv) {
-    char  *line = NULL,
+    char *line = NULL,
             *filePath = NULL,
             *txt = NULL,
             *fileSrc = NULL,
@@ -227,12 +227,8 @@ void exit_term() {
 void mkfile(const char *filePath, int *fd) {
 
     static mode_t defaultMode = 0644;
-    int flags = 0;
 
-    flags |= O_TRUNC;
-    flags |= O_CREAT;
-
-    *fd = open(filePath, flags, defaultMode);
+    *fd = open(filePath, O_TRUNC | O_CREAT, defaultMode);
 
 }
 
