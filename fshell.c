@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
                 if (filePath == NULL)
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 7, len - 7);
-                Assert(mkfile(filePath, &fd), "Make file");
+                Assert(mkfile(filePath, &fd), "mkfile");
                 close(fd);
                 free(filePath);
                 free(name);
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
                 if (filePath == NULL)
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 4, len - 4);
-                Assert(cat(filePath, &fd), "Cat");
+                Assert(cat(filePath, &fd), "cat");
                 close(fd);
                 free(filePath);
                 free(name);
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
                 if (txt == NULL || filePath == NULL)
                     ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %d %s", name, txt, &pos, filePath);
-                Assert(insert(filePath, &fd, txt, pos), "Insert");
+                Assert(insert(filePath, &fd, txt, pos), "insert");
                 close(fd);
                 free(txt);
                 free(filePath);
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
                 if (fileDest == NULL || fileSrc == NULL)
                     ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %s", name, fileSrc, fileDest);
-                Assert(cp_func(fileSrc, fileDest, &fd, &fdDest), "Copy");
+                Assert(cp_func(fileSrc, fileDest, &fd, &fdDest), "cp");
                 free(fileSrc);
                 free(fileDest);
                 free(name);
