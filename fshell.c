@@ -11,13 +11,10 @@
 #define MAX_CH 10
 
 int rec(char *line);
-void name(char *line, char line_n[MAX_CH]);
 void exit_term();
 void mkfile(const char *filePath, int *fd);
 void cat(const char *filePath, int *fd);
-int name_insert(char *line, char *txt, char* filePath, int len);
 void insert(const char *filePath, int *fd, char* txt, int pos);
-void name_cp(char* line, char *fileSrc, char* fileDest, int len);
 void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest);
 
 int main(int argc, char **argv) {
@@ -25,14 +22,17 @@ int main(int argc, char **argv) {
             *filePath = NULL,
             *txt = NULL,
             *fileSrc = NULL,
-            *fileDest = NULL;
+            *fileDest = NULL,
+            *name = NULL;
     size_t line_len = 0;
     int len, fd, pos, fdDest;
 
     printf("%% ");
     while ((len = getline(&line, &line_len, stdin)) != -1) {
         line[len - 1] = '\0';
-        switch (rec(line)) {
+        name = (char*) malloc(MAX_CH);
+        sscanf(line, "%s", name);
+        switch (rec(name)) {
             case 1:exit_term();
                 break;
             case 2:
@@ -73,21 +73,23 @@ int main(int argc, char **argv) {
                 filePath = (char*) malloc(len);
                 if (txt == NULL || filePath == NULL)
                     printf("Error!\n");
-                pos = name_insert(line, txt, filePath, len);
+                sscanf(line, "%s %s %d %s", name, txt, &pos, filePath);
                 insert(filePath, &fd, txt, pos);
                 close(fd);
                 free(txt);
                 free(filePath);
+                free(name);
                 break;
             case 8:
                 fileSrc = (char*) malloc(len);
                 fileDest = (char*) malloc(len);
                 if (fileDest == NULL || fileSrc == NULL)
                     printf("Error!");
-                name_cp(line, fileSrc, fileDest, len);
+                sscanf(line, "%s %s %s", name, fileSrc, fileDest);
                 cp_func(fileSrc, fileDest, &fd, &fdDest);
                 free(fileSrc);
                 free(fileDest);
+                free(name);
                 close(fd);
                 close(fdDest);
                 break;
@@ -97,7 +99,7 @@ int main(int argc, char **argv) {
         }
         printf("%% ");
     }
-
+    free(name);
     free(line);
 
     return 0;
@@ -109,7 +111,7 @@ void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest)
     *fdSrc = open(fileSrc, O_RDONLY, defaultMode);
     *fdDest = open(fileDest, O_WRONLY | O_TRUNC | O_CREAT, defaultMode);
 
-    static const uint32_t memBufSize = 1U << 13; // 8KB
+    static const uint32_t memBufSize = 1U << 13;
     char *memBuf = malloc(memBufSize);
     if (NULL == memBuf)
         printf("Error!\n");
@@ -119,27 +121,6 @@ void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest)
         write(*fdDest, memBuf, readBytes);
 
     free(memBuf);
-}
-
-void name_cp(char* line, char *fileSrc, char* fileDest, int len) {
-    int i = 3, j = 0, p = 0;
-    while (line[i] != '\0') {
-        if (line[i] == ' ' && p == 0) {
-            fileSrc[j] = '\0';
-            p = 1;
-            j = 0;
-            i++;
-        } else if (p == 0) {
-            fileSrc[j] = line[i];
-            i++;
-            j++;
-        } else if (p == 1) {
-            fileDest[j] = line[i];
-            i++;
-            j++;
-        }
-    }
-    fileDest[j] = '\0';
 }
 
 void insert(const char *filePath, int *fd, char* txt, int pos) {
@@ -158,70 +139,29 @@ void insert(const char *filePath, int *fd, char* txt, int pos) {
     close(*fd);
 }
 
-int name_insert(char* line, char *txt, char* filePath, int len) {
-    int i = 7, j = 0, p = 0, pos = 0;
-    char *tmp;
-    while (line[i] != '\0') {
-        if (line[i] == ' ' && p == 0) {
-            txt[j] = '\0';
-            i++;
-            do {
-                pos = pos + line[i] - '0';
-                pos *= 10;
-                i++;
-            } while (isdigit(line[i]));
-            pos /= 10;
-            p = 1;
-            j = 0;
-            i++;
-        } else if (p == 0) {
-            txt[j] = line[i];
-            i++;
-            j++;
-        } else if (p == 1) {
-            filePath[j] = line[i];
-            i++;
-            j++;
-        }
-    }
-    filePath[j] = '\0';
-    return pos;
-}
-
-int rec(char *line) {
-    char line_n[MAX_CH];
-    name(line, line_n);
-    if (strcmp(line_n, "exit") == 0)
+int rec(char *name) {
+    if (strcmp(name, "exit") == 0)
         return 1;
-    else if (strcmp(line_n, "mkfile") == 0)
+    else if (strcmp(name, "mkfile") == 0)
         return 2;
-    else if (strcmp(line_n, "mkdir") == 0)
+    else if (strcmp(name, "mkdir") == 0)
         return 3;
-    else if (strcmp(line_n, "rm") == 0)
+    else if (strcmp(name, "rm") == 0)
         return 4;
-    else if (strcmp(line_n, "rmdir") == 0)
+    else if (strcmp(name, "rmdir") == 0)
         return 5;
-    else if (strcmp(line_n, "cat") == 0)
+    else if (strcmp(name, "cat") == 0)
         return 6;
-    else if (strcmp(line_n, "insert") == 0)
+    else if (strcmp(name, "insert") == 0)
         return 7;
-    else if (strcmp(line_n, "cp") == 0)
+    else if (strcmp(name, "cp") == 0)
         return 8;
     else
         return 9;
 }
 
-void name(char *line, char line_n[MAX_CH]) {
-    int i = 0;
-    while (line[i] != ' ' && line[i] != '\0') {
-        line_n[i] = line[i];
-        i++;
-    }
-    line_n[i] = '\0';
-}
-
 void exit_term() {
-    _exit(EXIT_SUCCESS);
+    exit(EXIT_SUCCESS);
 }
 
 void mkfile(const char *filePath, int *fd) {
