@@ -7,15 +7,24 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <ctype.h>
-
-#define MAX_CH 10
+#include <stdbool.h>
 
 int rec(char *line);
 void exit_term();
-void mkfile(const char *filePath, int *fd);
-void cat(const char *filePath, int *fd);
-void insert(const char *filePath, int *fd, char* txt, int pos);
-void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest);
+bool mkfile(const char *filePath, int *fd);
+bool cat(const char *filePath, int *fd);
+bool insert(const char *filePath, int *fd, char* txt, int pos);
+bool cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest);
+void ErrorFatalImpl(const char *userMsg, const char *fileName,
+        const char *functionName, const int lineNum);
+
+#define MAX_CH 10
+#define ErrorFatal(userMsg) ErrorFatalImpl((userMsg), __FILE__, __func__, __LINE__)
+#define Assert(expr, userMsg) \
+    do { \
+        if (!(expr)) \
+            ErrorFatal(userMsg); \
+    } while(0)
 
 int main(int argc, char **argv) {
     char *line = NULL,
@@ -31,44 +40,58 @@ int main(int argc, char **argv) {
     while ((len = getline(&line, &line_len, stdin)) != -1) {
         line[len - 1] = '\0';
         name = (char*) malloc(MAX_CH);
+        if (name == NULL)
+            ErrorFatal("Allocate.");
         sscanf(line, "%s", name);
         switch (rec(name)) {
             case 1:exit_term();
                 break;
             case 2:
                 filePath = (char*) malloc(len - 7);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
                 strncpy(filePath, line + 7, len - 7);
-                mkfile(filePath, &fd);
+                Assert(mkfile(filePath, &fd), "Make file.");
                 close(fd);
                 free(filePath);
                 free(name);
                 break;
             case 3:
                 filePath = (char*) malloc(len - 6);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
                 static mode_t mode = 0755;
                 strncpy(filePath, line + 6, len - 6);
-                mkdir(filePath, mode);
+                Assert(mkdir(filePath, mode), "Make directory");
                 free(filePath);
                 free(name);
                 break;
             case 4:
                 filePath = (char*) malloc(len - 3);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
                 strncpy(filePath, line + 3, len - 3);
-                unlink(filePath);
+                if (unlink(filePath) == -1)
+                    ErrorFatal("Remove file.");
                 free(filePath);
                 free(name);
                 break;
             case 5:
                 filePath = (char*) malloc(len - 6);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
                 strncpy(filePath, line + 6, len - 6);
-                rmdir(filePath);
+                if (rmdir(filePath) == -1)
+                    ErrorFatal("Remove directory.");
                 free(filePath);
                 free(name);
                 break;
             case 6:
                 filePath = (char*) malloc(len - 4);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
                 strncpy(filePath, line + 4, len - 4);
-                cat(filePath, &fd);
+                Assert(cat(filePath, &fd), "Cat.");
                 close(fd);
                 free(filePath);
                 free(name);
@@ -77,9 +100,9 @@ int main(int argc, char **argv) {
                 txt = (char*) malloc(len);
                 filePath = (char*) malloc(len);
                 if (txt == NULL || filePath == NULL)
-                    printf("Error!\n");
+                    ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %d %s", name, txt, &pos, filePath);
-                insert(filePath, &fd, txt, pos);
+                Assert(insert(filePath, &fd, txt, pos), "Insert.");
                 close(fd);
                 free(txt);
                 free(filePath);
@@ -89,9 +112,9 @@ int main(int argc, char **argv) {
                 fileSrc = (char*) malloc(len);
                 fileDest = (char*) malloc(len);
                 if (fileDest == NULL || fileSrc == NULL)
-                    printf("Error!");
+                    ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %s", name, fileSrc, fileDest);
-                cp_func(fileSrc, fileDest, &fd, &fdDest);
+                Assert(cp_func(fileSrc, fileDest, &fd, &fdDest), "Copy.");
                 free(fileSrc);
                 free(fileDest);
                 free(name);
@@ -110,38 +133,65 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest) {
+void ErrorFatalImpl(const char *userMsg, const char *fileName,
+        const char *functionName, const int lineNum) {
+    perror(userMsg);
+    fprintf(stderr, "File: '%s'\nFunction: '%s'\nLine: '%d'\n", fileName, functionName, lineNum);
+    exit(EXIT_FAILURE);
+}
+
+bool cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest) {
     static mode_t defaultMode = 0644;
 
     *fdSrc = open(fileSrc, O_RDONLY, defaultMode);
     *fdDest = open(fileDest, O_WRONLY | O_TRUNC | O_CREAT, defaultMode);
+    if (*fdSrc == -1) {
+        fprintf(stderr, "File missing!\n");
+        return true;
+    }
+
+    if (*fdDest == -1)
+        return false;
 
     static const uint32_t memBufSize = 1U << 13;
     char *memBuf = malloc(memBufSize);
     if (NULL == memBuf)
-        printf("Error!\n");
+        return false;
 
     int32_t readBytes;
     while ((readBytes = read(*fdSrc, memBuf, memBufSize)) > 0)
-        write(*fdDest, memBuf, readBytes);
+        if (write(*fdDest, memBuf, readBytes) == -1) {
+            free(memBuf);
+            return false;
+        }
 
     free(memBuf);
+
+    return true;
 }
 
-void insert(const char *filePath, int *fd, char* txt, int pos) {
+bool insert(const char *filePath, int *fd, char* txt, int pos) {
 
     static mode_t defaultMode = 0644;
     int memBufSize;
 
     *fd = open(filePath, O_RDWR, defaultMode);
+    if (*fd == -1) {
+        fprintf(stderr, "File missing!\n");
+        return true;
+    }
 
-    lseek(*fd, pos, SEEK_SET);
+    if (lseek(*fd, pos, SEEK_SET) == -1)
+        return false;
 
     memBufSize = strlen(txt);
 
-    write(*fd, txt, memBufSize);
+    if (write(*fd, txt, memBufSize) == -1)
+        return false;
 
     close(*fd);
+
+    return true;
 }
 
 int rec(char *name) {
@@ -169,26 +219,38 @@ void exit_term() {
     exit(EXIT_SUCCESS);
 }
 
-void mkfile(const char *filePath, int *fd) {
+bool mkfile(const char *filePath, int *fd) {
 
     static mode_t defaultMode = 0644;
 
     *fd = open(filePath, O_TRUNC | O_CREAT, defaultMode);
+    if (*fd == -1)
+        return false;
+
+    return true;
 
 }
 
-void cat(const char *filePath, int *fd) {
+bool cat(const char *filePath, int *fd) {
     static mode_t defaultMode = 0644;
     *fd = open(filePath, O_RDONLY, defaultMode);
+    if (*fd == -1) {
+        fprintf(stderr, "File missing!\n");
+        return true;
+    }
 
     static const uint32_t memBufSize = 1U << 13;
     char *memBuf = malloc(memBufSize);
     if (NULL == memBuf)
-        printf("Error!\n");
+        return false;
 
     int32_t readBytes;
     while ((readBytes = read(*fd, memBuf, memBufSize)) > 0)
-        write(STDOUT_FILENO, memBuf, readBytes);
-
+        if (write(STDOUT_FILENO, memBuf, readBytes) == -1) {
+            free(memBuf);
+            return false;
+        }
     free(memBuf);
+
+    return true;
 }
