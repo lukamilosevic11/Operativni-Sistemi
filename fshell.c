@@ -41,6 +41,7 @@ int main(int argc, char **argv) {
                 mkfile(filePath, &fd);
                 close(fd);
                 free(filePath);
+                free(name);
                 break;
             case 3:
                 filePath = (char*) malloc(len - 6);
@@ -48,18 +49,21 @@ int main(int argc, char **argv) {
                 strncpy(filePath, line + 6, len - 6);
                 mkdir(filePath, mode);
                 free(filePath);
+                free(name);
                 break;
             case 4:
                 filePath = (char*) malloc(len - 3);
                 strncpy(filePath, line + 3, len - 3);
                 unlink(filePath);
                 free(filePath);
+                free(name);
                 break;
             case 5:
                 filePath = (char*) malloc(len - 6);
                 strncpy(filePath, line + 6, len - 6);
                 rmdir(filePath);
                 free(filePath);
+                free(name);
                 break;
             case 6:
                 filePath = (char*) malloc(len - 4);
@@ -67,6 +71,7 @@ int main(int argc, char **argv) {
                 cat(filePath, &fd);
                 close(fd);
                 free(filePath);
+                free(name);
                 break;
             case 7:
                 txt = (char*) malloc(len);
@@ -95,11 +100,11 @@ int main(int argc, char **argv) {
                 break;
             case 9:
                 printf("Unknown command!\n");
+                free(name);
                 break;
         }
         printf("%% ");
     }
-    free(name);
     free(line);
 
     return 0;
