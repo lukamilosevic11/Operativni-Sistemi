@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
                 if (filePath == NULL)
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 7, len - 7);
-                Assert(mkfile(filePath, &fd), "Make file.");
+                Assert(mkfile(filePath, &fd), "Make file");
                 close(fd);
                 free(filePath);
                 free(name);
@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
                     ErrorFatal("Allocate.");
                 static mode_t mode = 0755;
                 strncpy(filePath, line + 6, len - 6);
-                Assert(mkdir(filePath, mode), "Make directory");
+                if (mkdir(filePath, mode) == -1)
+                    fprintf(stderr, "Wrong file path or missing!\n");
                 free(filePath);
                 free(name);
                 break;
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 3, len - 3);
                 if (unlink(filePath) == -1)
-                    ErrorFatal("Remove file.");
+                    fprintf(stderr, "Wrong file path or missing!\n");
                 free(filePath);
                 free(name);
                 break;
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 6, len - 6);
                 if (rmdir(filePath) == -1)
-                    ErrorFatal("Remove directory.");
+                    fprintf(stderr, "Wrong file path or missing!\n");
                 free(filePath);
                 free(name);
                 break;
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
                 if (filePath == NULL)
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 4, len - 4);
-                Assert(cat(filePath, &fd), "Cat.");
+                Assert(cat(filePath, &fd), "Cat");
                 close(fd);
                 free(filePath);
                 free(name);
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
                 if (txt == NULL || filePath == NULL)
                     ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %d %s", name, txt, &pos, filePath);
-                Assert(insert(filePath, &fd, txt, pos), "Insert.");
+                Assert(insert(filePath, &fd, txt, pos), "Insert");
                 close(fd);
                 free(txt);
                 free(filePath);
@@ -114,7 +115,7 @@ int main(int argc, char **argv) {
                 if (fileDest == NULL || fileSrc == NULL)
                     ErrorFatal("Allocate.");
                 sscanf(line, "%s %s %s", name, fileSrc, fileDest);
-                Assert(cp_func(fileSrc, fileDest, &fd, &fdDest), "Copy.");
+                Assert(cp_func(fileSrc, fileDest, &fd, &fdDest), "Copy");
                 free(fileSrc);
                 free(fileDest);
                 free(name);
@@ -145,13 +146,10 @@ bool cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest)
 
     *fdSrc = open(fileSrc, O_RDONLY, defaultMode);
     *fdDest = open(fileDest, O_WRONLY | O_TRUNC | O_CREAT, defaultMode);
-    if (*fdSrc == -1) {
-        fprintf(stderr, "File missing!\n");
+    if (*fdSrc == -1 || *fdDest == -1) {
+        fprintf(stderr, "Wrong file path or missing!\n");
         return true;
     }
-
-    if (*fdDest == -1)
-        return false;
 
     static const uint32_t memBufSize = 1U << 13;
     char *memBuf = malloc(memBufSize);
@@ -177,7 +175,7 @@ bool insert(const char *filePath, int *fd, char* txt, int pos) {
 
     *fd = open(filePath, O_RDWR, defaultMode);
     if (*fd == -1) {
-        fprintf(stderr, "File missing!\n");
+        fprintf(stderr, "Wrong file path or missing!\n");
         return true;
     }
 
@@ -224,18 +222,19 @@ bool mkfile(const char *filePath, int *fd) {
     static mode_t defaultMode = 0644;
 
     *fd = open(filePath, O_TRUNC | O_CREAT, defaultMode);
-    if (*fd == -1)
-        return false;
+    if (*fd == -1) {
+        fprintf(stderr, "Wrong file path or missing!\n");
+        return true;
+    }
 
     return true;
-
 }
 
 bool cat(const char *filePath, int *fd) {
     static mode_t defaultMode = 0644;
     *fd = open(filePath, O_RDONLY, defaultMode);
     if (*fd == -1) {
-        fprintf(stderr, "File missing!\n");
+        fprintf(stderr, "Wrong file path or missing!\n");
         return true;
     }
 
