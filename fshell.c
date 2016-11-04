@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <pwd.h>
+#include<errno.h>
+#include <grp.h>
 
 int rec(char *line);
 void exit_term();
@@ -17,6 +20,7 @@ bool insert(const char *filePath, int *fd, char* txt, int pos);
 bool cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest);
 void ErrorFatalImpl(const char *userMsg, const char *fileName,
         const char *functionName, const int lineNum);
+bool FInfo(const char* filePath);
 
 #define MAX_CH 10
 #define ErrorFatal(userMsg) ErrorFatalImpl((userMsg), __FILE__, __func__, __LINE__)
@@ -63,7 +67,7 @@ int main(int argc, char **argv) {
                 static mode_t mode = 0755;
                 strncpy(filePath, line + 6, len - 6);
                 if (mkdir(filePath, mode) == -1)
-                    fprintf(stderr, "Wrong file path or missing!\n");
+                    printf("%s\n", strerror(errno));
                 free(filePath);
                 free(name);
                 break;
@@ -73,7 +77,7 @@ int main(int argc, char **argv) {
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 3, len - 3);
                 if (unlink(filePath) == -1)
-                    fprintf(stderr, "Wrong file path or missing!\n");
+                    printf("%s\n", strerror(errno));
                 free(filePath);
                 free(name);
                 break;
@@ -83,7 +87,7 @@ int main(int argc, char **argv) {
                     ErrorFatal("Allocate.");
                 strncpy(filePath, line + 6, len - 6);
                 if (rmdir(filePath) == -1)
-                    fprintf(stderr, "Wrong file path or missing!\n");
+                    printf("%s\n", strerror(errno));
                 free(filePath);
                 free(name);
                 break;
@@ -123,6 +127,14 @@ int main(int argc, char **argv) {
                 close(fdDest);
                 break;
             case 9:
+                filePath = (char*) malloc(len - 5);
+                if (filePath == NULL)
+                    ErrorFatal("Allocate.");
+                strncpy(filePath, line + 5, len - 5);
+                if (!FInfo(filePath))
+                    printf("%s\n", strerror(errno));
+                break;
+            case 10:
                 printf("Unknown command!\n");
                 free(name);
                 break;
@@ -141,13 +153,44 @@ void ErrorFatalImpl(const char *userMsg, const char *fileName,
     exit(EXIT_FAILURE);
 }
 
+bool FInfo(const char* filePath) {
+    struct stat finfo;
+    if (stat(filePath, &finfo) == -1)
+        return false;
+
+    if (S_ISREG(finfo.st_mode))
+        printf("Type: regular file\n");
+    else if (S_ISDIR(finfo.st_mode))
+        printf("Type: directory\n");
+    else if (S_ISCHR(finfo.st_mode))
+        printf("Type: character device\n");
+    else if (S_ISBLK(finfo.st_mode))
+        printf("Type: block device\n");
+    else if (S_ISFIFO(finfo.st_mode))
+        printf("Type: FIFO (pipe)\n");
+    else if (S_ISLNK(finfo.st_mode))
+        printf("Type: symbolic link\n");
+    else if (S_ISSOCK(finfo.st_mode))
+        printf("Type: socket\n");
+
+    struct passwd *uI = getpwuid(finfo.st_uid);
+    printf("Owner: %s\n", uI->pw_name);
+
+    struct group *groupI = getgrgid(finfo.st_gid);
+    printf("Group: %s\n", groupI->gr_name);
+
+    printf("Size: %ju\n", (intmax_t) finfo.st_size);
+
+    return true;
+}
+
 bool cp_func(const char *fileSrc, const char *fileDest, int *fdSrc, int *fdDest) {
     static mode_t defaultMode = 0644;
 
     *fdSrc = open(fileSrc, O_RDONLY, defaultMode);
     *fdDest = open(fileDest, O_WRONLY | O_TRUNC | O_CREAT, defaultMode);
     if (*fdSrc == -1 || *fdDest == -1) {
-        fprintf(stderr, "Wrong file path or missing!\n");
+        printf("%s\n", strerror(errno));
         return true;
     }
 
@@ -175,7 +218,7 @@ bool insert(const char *filePath, int *fd, char* txt, int pos) {
 
     *fd = open(filePath, O_RDWR, defaultMode);
     if (*fd == -1) {
-        fprintf(stderr, "Wrong file path or missing!\n");
+        printf("%s\n", strerror(errno));
         return true;
     }
 
@@ -209,8 +252,10 @@ int rec(char *name) {
         return 7;
     else if (strcmp(name, "cp") == 0)
         return 8;
-    else
+    else if (strcmp(name, "info") == 0)
         return 9;
+    else
+        return 10;
 }
 
 void exit_term() {
@@ -223,7 +268,7 @@ bool mkfile(const char *filePath, int *fd) {
 
     *fd = open(filePath, O_TRUNC | O_CREAT, defaultMode);
     if (*fd == -1) {
-        fprintf(stderr, "Wrong file path or missing!\n");
+        printf("%s\n", strerror(errno));
         return true;
     }
 
@@ -234,7 +279,7 @@ bool cat(const char *filePath, int *fd) {
     static mode_t defaultMode = 0644;
     *fd = open(filePath, O_RDONLY, defaultMode);
     if (*fd == -1) {
-        fprintf(stderr, "Wrong file path or missing!\n");
+        printf("%s\n", strerror(errno));
         return true;
     }
 
