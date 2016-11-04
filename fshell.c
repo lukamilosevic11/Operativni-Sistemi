@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
                 strncpy(filePath, line + 5, len - 5);
                 if (!FInfo(filePath))
                     printf("%s\n", strerror(errno));
+                free(filePath);
                 break;
             case 10:
                 printf("Unknown command!\n");
