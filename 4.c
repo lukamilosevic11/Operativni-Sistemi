@@ -55,4 +55,5 @@ void osCatFileFromPos(const char* destPath,
     }
 
     close(fd);
+    fclose(f);
 }
