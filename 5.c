@@ -132,6 +132,7 @@ void osCatFile(const char* destPath, const char* srcPath) {
     }
 
     close(fd);
+    fclose(f);
 }
 
 int osNumberOfUsersInGroup(const char* filePath) {
