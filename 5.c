@@ -124,11 +124,13 @@ void osCatFile(const char* destPath, const char* srcPath) {
         exit(1);
     }
 
-    while ((getline(&line, &len, f)) != -1);
-
-    if (write(fd, line, strlen(line)) == -1) {
-        perror("write failed");
-        exit(1);
+    while ((d = getline(&line, &len, f)) != -1) {
+        if (line[d - 1] == '\n') //da ne bi nadovezao u novom fajlu u novi red nego sve da bude u istom
+            line[d - 1] = ' ';
+        if (write(fd, line, strlen(line)) == -1) {
+            perror("write() failed");
+            exit(1);
+        }
     }
 
     close(fd);
