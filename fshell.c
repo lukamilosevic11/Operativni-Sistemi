@@ -181,6 +181,17 @@ bool FInfo(const char* filePath) {
     printf("Group: %s\n", groupI->gr_name);
 
     printf("Size: %ju\n", (intmax_t) finfo.st_size);
+        
+        if ((S_IRUSR & finfo.st_mode)) u += 4; //KEFI AKO SE NEKO PITA!!!!1
+	if ((S_IWUSR & finfo.st_mode)) u += 2;
+	if ((S_IXUSR & finfo.st_mode)) u++;
+	if ((S_IRGRP & finfo.st_mode)) g += 4;
+	if ((S_IWGRP & finfo.st_mode)) g += 2;
+	if ((S_IXGRP & finfo.st_mode)) g++;
+	if ((S_IROTH & finfo.st_mode)) o += 4;
+	if ((S_IWOTH & finfo.st_mode)) o += 2;
+    if ((S_IXOTH & finfo.st_mode)) o++;
+	printf("Access: 0%d%d%d\n", u, g, o);
 
     return true;
 }
