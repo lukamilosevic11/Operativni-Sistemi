@@ -158,7 +158,7 @@ bool FInfo(const char* filePath) {
     struct stat finfo;
     if (stat(filePath, &finfo) == -1)
         return false;
-
+    int u, g, o;
     if (S_ISREG(finfo.st_mode))
         printf("Type: regular file\n");
     else if (S_ISDIR(finfo.st_mode))
