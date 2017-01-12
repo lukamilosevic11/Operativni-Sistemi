@@ -24,8 +24,8 @@ void* threadFunction(void* arg) {
         if (pthread_mutex_lock(&g_Lock))
             greska("pthread_cond_lock failed");
 
-            if (pthread_cond_wait(&g_Signaler, &g_Lock))
-                greska("pthread_cond_wait failed");
+        if (pthread_cond_wait(&g_Signaler, &g_Lock))
+            greska("pthread_cond_wait failed");
 
         if (g_Num == idx->id) {
             int d = strlen(g_Data);
